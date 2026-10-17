@@ -1,0 +1,9 @@
+# Configuración local de Liquibase: contiene la contraseña. NUNCA se sube.
+liquibase.properties
+
+# Respaldos de la base de datos (pueden contener datos reales)
+respaldos/
+
+# Archivos de Visual Studio y logs
+.vs/
+*.log

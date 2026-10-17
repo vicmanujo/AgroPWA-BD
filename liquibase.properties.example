@@ -1,0 +1,12 @@
+# =====================================================================
+#  Plantilla de configuración de Liquibase.
+#  Copia este archivo como "liquibase.properties" y escribe tus datos.
+#  liquibase.properties está en .gitignore: la contraseña nunca va a Git.
+# =====================================================================
+
+changeLogFile=changelog/db.changelog-master.yaml
+
+# Desarrollo (contenedor Docker local)
+url=jdbc:postgresql://localhost:5432/agro_db_dev
+username=TU_USUARIO
+password=TU_CONTRASEÑA
