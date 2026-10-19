@@ -18,3 +18,6 @@ databaseChangeLog:
   - include:
       file: migraciones/004_columnas_usuario_registro.sql
       relativeToChangelogFile: true
+  - include:
+      file: migraciones/005_restriccion_telefono_10_digitos.sql
+      relativeToChangelogFile: true
