@@ -24,3 +24,6 @@ databaseChangeLog:
   - include:
       file: migraciones/006_sp_registrar_usuario.sql
       relativeToChangelogFile: true
+  - include:
+      file: migraciones/007_sp_inicio_sesion.sql
+      relativeToChangelogFile: true
