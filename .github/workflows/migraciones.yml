@@ -1,7 +1,9 @@
 # =====================================================================
 #  Agro · HU-30 · Validación automática de las migraciones (Liquibase)
 #
-#  En cada push y Pull Request levanta un PostgreSQL VACÍO y:
+#  En cada push y Pull Request levanta un PostgreSQL VACÍO, crea los
+#  roles agro_admin y agro_app (como en Azure, para que la migración 010
+#  de permisos se aplique y se revierta de verdad) y:
 #    1. valida el changelog,
 #    2. muestra los cambios pendientes,
 #    3. aplica todo, revierte todo y vuelve a aplicar (update-testing-rollback),
@@ -66,7 +68,14 @@ jobs:
           echo "$RUNNER_TEMP/liquibase" >> "$GITHUB_PATH"
 
       - name: Instalar el driver de PostgreSQL
-        run: liquibase lpm add postgresql --global
+        # Se descarga de internet: hasta 3 intentos para que un fallo de red no tumbe el check
+        run: |
+          for intento in 1 2 3; do
+            liquibase lpm add postgresql --global && exit 0
+            echo "Falló la descarga del driver (intento $intento); reintentando en 10 s..."
+            sleep 10
+          done
+          exit 1
 
       - name: Crear los roles que existen en Azure (agro_admin, agro_app)
         env:
