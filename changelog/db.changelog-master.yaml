@@ -21,3 +21,18 @@ databaseChangeLog:
   - include:
       file: migraciones/005_restriccion_telefono_10_digitos.sql
       relativeToChangelogFile: true
+  - include:
+      file: migraciones/006_sp_registrar_usuario.sql
+      relativeToChangelogFile: true
+  - include:
+      file: migraciones/007_sp_inicio_sesion.sql
+      relativeToChangelogFile: true
+  - include:
+      file: migraciones/008_sp_sesion_activa.sql
+      relativeToChangelogFile: true
+  - include:
+      file: migraciones/009_sp_cerrar_sesion.sql
+      relativeToChangelogFile: true
+  - include:
+      file: migraciones/010_seguridad_solo_procedimientos.sql
+      relativeToChangelogFile: true
