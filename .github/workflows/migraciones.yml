@@ -68,6 +68,14 @@ jobs:
       - name: Instalar el driver de PostgreSQL
         run: liquibase lpm add postgresql --global
 
+      - name: Crear los roles que existen en Azure (agro_admin, agro_app)
+        env:
+          PGPASSWORD: agro_ci
+        run: |
+          psql -h localhost -U agro_ci -d agro_db_ci -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE agro_admin NOLOGIN;" \
+            -c "CREATE ROLE agro_app NOLOGIN;"
+
       - name: 1. Validar el changelog
         run: liquibase validate
 
