@@ -1,0 +1,38 @@
+# =====================================================================
+#  Agro · HU-30 · Changelog maestro de agro_db (Liquibase)
+#  Lista TODAS las migraciones en el orden en que se aplican.
+#  Regla: una migración ya aplicada NUNCA se modifica; los cambios
+#  se hacen con una migración nueva al final de la lista.
+# =====================================================================
+
+databaseChangeLog:
+  - include:
+      file: migraciones/001_esquema_base.sql
+      relativeToChangelogFile: true
+  - include:
+      file: migraciones/002_datos_catalogos.sql
+      relativeToChangelogFile: true
+  - include:
+      file: migraciones/003_crear_tabla_intento_acceso.sql
+      relativeToChangelogFile: true
+  - include:
+      file: migraciones/004_columnas_usuario_registro.sql
+      relativeToChangelogFile: true
+  - include:
+      file: migraciones/005_restriccion_telefono_10_digitos.sql
+      relativeToChangelogFile: true
+  - include:
+      file: migraciones/006_sp_registrar_usuario.sql
+      relativeToChangelogFile: true
+  - include:
+      file: migraciones/007_sp_inicio_sesion.sql
+      relativeToChangelogFile: true
+  - include:
+      file: migraciones/008_sp_sesion_activa.sql
+      relativeToChangelogFile: true
+  - include:
+      file: migraciones/009_sp_cerrar_sesion.sql
+      relativeToChangelogFile: true
+  - include:
+      file: migraciones/010_seguridad_solo_procedimientos.sql
+      relativeToChangelogFile: true

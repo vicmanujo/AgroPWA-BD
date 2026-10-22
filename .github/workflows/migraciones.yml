@@ -1,0 +1,89 @@
+# =====================================================================
+#  Agro · HU-30 · Validación automática de las migraciones (Liquibase)
+#
+#  En cada push y Pull Request levanta un PostgreSQL VACÍO y:
+#    1. valida el changelog,
+#    2. muestra los cambios pendientes,
+#    3. aplica todo, revierte todo y vuelve a aplicar (update-testing-rollback),
+#    4. muestra el historial.
+#  La base es temporal: sus credenciales no son secretas ni reales.
+# =====================================================================
+
+name: BD · Validar migraciones (Liquibase)
+
+on:
+  push:
+    branches: [ main, develop, 'Sprint*' ]
+  pull_request:
+    branches: [ main, develop, 'Sprint*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  LIQUIBASE_VERSION: '5.0.4'
+  LIQUIBASE_COMMAND_URL: jdbc:postgresql://localhost:5432/agro_db_ci
+  LIQUIBASE_COMMAND_USERNAME: agro_ci
+  LIQUIBASE_COMMAND_PASSWORD: agro_ci
+  LIQUIBASE_COMMAND_CHANGELOG_FILE: changelog/db.changelog-master.yaml
+
+jobs:
+  validar:
+    name: Migraciones en base limpia
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: agro_ci
+          POSTGRES_PASSWORD: agro_ci
+          POSTGRES_DB: agro_db_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agro_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v5
+
+      - name: Instalar Java 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Instalar Liquibase ${{ env.LIQUIBASE_VERSION }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/liquibase"
+          curl -sSL "https://github.com/liquibase/liquibase/releases/download/v${LIQUIBASE_VERSION}/liquibase-${LIQUIBASE_VERSION}.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP/liquibase"
+          echo "$RUNNER_TEMP/liquibase" >> "$GITHUB_PATH"
+
+      - name: Instalar el driver de PostgreSQL
+        run: liquibase lpm add postgresql --global
+
+      - name: Crear los roles que existen en Azure (agro_admin, agro_app)
+        env:
+          PGPASSWORD: agro_ci
+        run: |
+          psql -h localhost -U agro_ci -d agro_db_ci -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE agro_admin NOLOGIN;" \
+            -c "CREATE ROLE agro_app NOLOGIN;"
+
+      - name: 1. Validar el changelog
+        run: liquibase validate
+
+      - name: 2. Cambios pendientes (base limpia)
+        run: liquibase status --verbose
+
+      - name: 3. Aplicar, revertir y reaplicar todo
+        run: liquibase update-testing-rollback
+
+      - name: 4. Historial de migraciones
+        run: liquibase history
