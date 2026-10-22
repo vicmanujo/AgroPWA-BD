@@ -30,3 +30,6 @@ databaseChangeLog:
   - include:
       file: migraciones/008_sp_sesion_activa.sql
       relativeToChangelogFile: true
+  - include:
+      file: migraciones/009_sp_cerrar_sesion.sql
+      relativeToChangelogFile: true
