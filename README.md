@@ -5,6 +5,7 @@
 Versionamiento de la base de datos **`agro_db`** (PostgreSQL) de **Agro**, la PWA para el registro y seguimiento de cultivos.
 HU-30 · Versionamiento de la base de datos con migraciones · Sprint 3
 HU-09, HU-10, HU-11 · Procedimientos almacenados de autenticación · Sprint 4
+HU-12, HU-13 · Procedimientos del dashboard y de parcelas · Sprint 5
 Equipo: Victor Manuel Jose Jose · Jesus Alejandro Gutierrez Montufar (10 IDGS-G3, UTTT)
 
 **Backend (API .NET):** [AlejandroGtz23/AgroPWA-Back](https://github.com/AlejandroGtz23/AgroPWA-Back) — genera sus entidades
@@ -37,7 +38,9 @@ AgroPWA-BD/
 │       ├── 007_sp_inicio_sesion.sql
 │       ├── 008_sp_sesion_activa.sql
 │       ├── 009_sp_cerrar_sesion.sql
-│       └── 010_seguridad_solo_procedimientos.sql
+│       ├── 010_seguridad_solo_procedimientos.sql
+│       ├── 011_sp_parcelas.sql
+│       └── 012_sp_dashboard.sql
 ├── liquibase.properties.example          plantilla de configuración (sin contraseña)
 └── .gitignore                            ignora liquibase.properties y respaldos/
 ```
@@ -56,8 +59,10 @@ AgroPWA-BD/
 | 008 | Procedimientos | `sp_validar_sesion` (vencimiento y 20 min de inactividad) · `sp_renovar_sesion` (rota `jti` y refresh token) | HU-10 | `DROP PROCEDURE` |
 | 009 | Procedimiento | `sp_cerrar_sesion` (`motivo_cierre = 'logout'`) | HU-11 | `DROP PROCEDURE` |
 | 010 | **Seguridad** | `agro_app` solo puede ejecutar procedimientos (sin acceso directo a tablas); precondición: existen `agro_app` y `agro_admin` | HU-09 a HU-11 | Devuelve los permisos anteriores |
+| 011 | Procedimientos | `sp_registrar_parcela` (si el `id_local` ya existe devuelve la existente; nombre único por usuario sin mayúsculas) · `sp_editar_parcela` (`false` si no es del usuario) · `sp_obtener_parcelas` (cursor, con número de cultivos) | HU-13 | `DROP PROCEDURE` |
+| 012 | Procedimientos | `sp_obtener_resumen_dashboard` (totales y guía; «avances del mes» en hora de México) · `sp_obtener_actividad_reciente` (últimos N avances, máx. 20) | HU-12 | `DROP PROCEDURE` |
 
-En total son **23 changesets**.
+En total son **28 changesets**.
 
 **Regla:** una migración ya aplicada **nunca se modifica** (Liquibase lo detecta por su checksum).
 Cada cambio nuevo es un archivo nuevo al final de `db.changelog-master.yaml`.
@@ -126,7 +131,7 @@ SELECT has_function_privilege('agro_app', 'sp_cerrar_sesion(varchar, boolean)', 
 
 ```bash
 liquibase validate              # revisa el changelog
-liquibase status --verbose      # cambios pendientes (23 en una base vacía)
+liquibase status --verbose      # cambios pendientes (28 en una base vacía)
 liquibase update-sql            # (opcional) muestra el SQL sin ejecutarlo
 liquibase update                # aplica todas las migraciones pendientes
 liquibase history               # cambios aplicados: fecha, autor, id y etiqueta
@@ -145,7 +150,7 @@ docker cp mi_postgres:/tmp/respaldo.dump respaldos/respaldo.dump
 
 liquibase rollback-count-sql 1  # muestra el SQL de la reversión sin ejecutarlo
 liquibase rollback-count 1      # revierte el último cambio
-liquibase rollback v1.0-hu03    # regresa a la base de la HU-03 (revierte de la 003 a la 010)
+liquibase rollback v1.0-hu03    # regresa a la base de la HU-03 (revierte de la 003 a la 012)
 liquibase update                # reaplica los cambios revertidos
 ```
 
@@ -178,6 +183,31 @@ Workflow: [`.github/workflows/migraciones.yml`](.github/workflows/migraciones.ym
 SprintN_Victor ─► develop ─► main
 ```
 
-Después del merge a `main`, las migraciones se aplican en Azure con `liquibase update` (conectado como `agro_admin`).
-
 Todo cambio llega por Pull Request; cada PR valida las migraciones automáticamente.
+
+## Aplicar las migraciones en Azure
+
+Después del merge a `main` y **antes** de desplegar el backend que las usa (si no, sus endpoints responden 500).
+Requisitos: servidor `agropwa-db-2` iniciado y tu IP en el firewall (**Redes → Agregar dirección IP del cliente actual**).
+
+La contraseña de `agro_admin` se pasa en una variable de entorno para que **no quede escrita en el comando ni en el
+historial** de PowerShell:
+
+```powershell
+$env:LIQUIBASE_COMMAND_PASSWORD = [System.Net.NetworkCredential]::new("", (Read-Host "Contraseña de agro_admin" -AsSecureString)).Password
+$azure = "jdbc:postgresql://agropwa-db-2.postgres.database.azure.com:5432/agro_db?sslmode=require"
+
+liquibase --url=$azure --username=agro_admin status --verbose   # qué falta
+liquibase --url=$azure --username=agro_admin update             # aplicar
+liquibase --url=$azure --username=agro_admin history            # comprobar
+
+Remove-Item Env:LIQUIBASE_COMMAND_PASSWORD
+```
+
+`status`, `update` y `history` son **comandos distintos** (no opciones de `status`).
+
+| Sprint | Migraciones aplicadas en Azure |
+|---|---|
+| 3 | 001 a 005 |
+| 4 | 006 a 010 |
+| 5 | 011 y 012 |
