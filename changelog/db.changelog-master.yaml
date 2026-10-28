@@ -39,3 +39,6 @@ databaseChangeLog:
   - include:
       file: migraciones/011_sp_parcelas.sql
       relativeToChangelogFile: true
+  - include:
+      file: migraciones/012_sp_dashboard.sql
+      relativeToChangelogFile: true
