@@ -6,6 +6,7 @@ Versionamiento de la base de datos **`agro_db`** (PostgreSQL) de **Agro**, la PW
 HU-30 · Versionamiento de la base de datos con migraciones · Sprint 3
 HU-09, HU-10, HU-11 · Procedimientos almacenados de autenticación · Sprint 4
 HU-12, HU-13 · Procedimientos del dashboard y de parcelas · Sprint 5
+HU-14, HU-15, HU-16 · Procedimientos de cultivos · Sprint 6
 Equipo: Victor Manuel Jose Jose · Jesus Alejandro Gutierrez Montufar (10 IDGS-G3, UTTT)
 
 **Backend (API .NET):** [AlejandroGtz23/AgroPWA-Back](https://github.com/AlejandroGtz23/AgroPWA-Back) — genera sus entidades
@@ -40,7 +41,8 @@ AgroPWA-BD/
 │       ├── 009_sp_cerrar_sesion.sql
 │       ├── 010_seguridad_solo_procedimientos.sql
 │       ├── 011_sp_parcelas.sql
-│       └── 012_sp_dashboard.sql
+│       ├── 012_sp_dashboard.sql
+│       └── 013_sp_cultivos.sql
 ├── liquibase.properties.example          plantilla de configuración (sin contraseña)
 └── .gitignore                            ignora liquibase.properties y respaldos/
 ```
@@ -61,8 +63,9 @@ AgroPWA-BD/
 | 010 | **Seguridad** | `agro_app` solo puede ejecutar procedimientos (sin acceso directo a tablas); precondición: existen `agro_app` y `agro_admin` | HU-09 a HU-11 | Devuelve los permisos anteriores |
 | 011 | Procedimientos | `sp_registrar_parcela` (si el `id_local` ya existe devuelve la existente; nombre único por usuario sin mayúsculas) · `sp_editar_parcela` (`false` si no es del usuario) · `sp_obtener_parcelas` (cursor, con número de cultivos) | HU-13 | `DROP PROCEDURE` |
 | 012 | Procedimientos | `sp_obtener_resumen_dashboard` (totales y guía; «avances del mes» en hora de México) · `sp_obtener_actividad_reciente` (últimos N avances, máx. 20) | HU-12 | `DROP PROCEDURE` |
+| 013 | Procedimientos | `sp_obtener_tipos_cultivo` (catálogo) · `sp_registrar_cultivo` (parcela del usuario y tipo válido, si no lanza `P0002` con `COLUMN`; `id_local` repetido devuelve el existente) · `sp_obtener_cultivos` (búsqueda sin acentos en cultivo o parcela, filtros, paginación y `total`) · `sp_obtener_detalle_cultivo` · `sp_obtener_avances_cultivo` · `sp_obtener_fotografias_cultivo` | HU-14 a HU-16 | `DROP PROCEDURE` |
 
-En total son **28 changesets**.
+En total son **34 changesets**.
 
 **Regla:** una migración ya aplicada **nunca se modifica** (Liquibase lo detecta por su checksum).
 Cada cambio nuevo es un archivo nuevo al final de `db.changelog-master.yaml`.
@@ -131,7 +134,7 @@ SELECT has_function_privilege('agro_app', 'sp_cerrar_sesion(varchar, boolean)', 
 
 ```bash
 liquibase validate              # revisa el changelog
-liquibase status --verbose      # cambios pendientes (28 en una base vacía)
+liquibase status --verbose      # cambios pendientes (34 en una base vacía)
 liquibase update-sql            # (opcional) muestra el SQL sin ejecutarlo
 liquibase update                # aplica todas las migraciones pendientes
 liquibase history               # cambios aplicados: fecha, autor, id y etiqueta
@@ -150,7 +153,7 @@ docker cp mi_postgres:/tmp/respaldo.dump respaldos/respaldo.dump
 
 liquibase rollback-count-sql 1  # muestra el SQL de la reversión sin ejecutarlo
 liquibase rollback-count 1      # revierte el último cambio
-liquibase rollback v1.0-hu03    # regresa a la base de la HU-03 (revierte de la 003 a la 012)
+liquibase rollback v1.0-hu03    # regresa a la base de la HU-03 (revierte de la 003 a la 013)
 liquibase update                # reaplica los cambios revertidos
 ```
 
@@ -211,3 +214,4 @@ Remove-Item Env:LIQUIBASE_COMMAND_PASSWORD
 | 3 | 001 a 005 |
 | 4 | 006 a 010 |
 | 5 | 011 y 012 |
+| 6 | 013 |
