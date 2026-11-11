@@ -51,3 +51,6 @@ databaseChangeLog:
   - include:
       file: migraciones/015_sp_avances.sql
       relativeToChangelogFile: true
+  - include:
+      file: migraciones/016_sp_fotografias.sql
+      relativeToChangelogFile: true
