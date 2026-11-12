@@ -8,6 +8,7 @@ HU-09, HU-10, HU-11 · Procedimientos almacenados de autenticación · Sprint 4
 HU-12, HU-13 · Procedimientos del dashboard y de parcelas · Sprint 5
 HU-14, HU-15, HU-16 · Procedimientos de cultivos · Sprint 6
 HU-17, HU-18, HU-28 · Editar y eliminar cultivo, formulario de contacto · Sprint 7
+HU-19, HU-20 · Avances y fotografías · Sprint 8
 Equipo: Victor Manuel Jose Jose · Jesus Alejandro Gutierrez Montufar (10 IDGS-G3, UTTT)
 
 **Backend (API .NET):** [AlejandroGtz23/AgroPWA-Back](https://github.com/AlejandroGtz23/AgroPWA-Back) — genera sus entidades
@@ -44,7 +45,9 @@ AgroPWA-BD/
 │       ├── 011_sp_parcelas.sql
 │       ├── 012_sp_dashboard.sql
 │       ├── 013_sp_cultivos.sql
-│       └── 014_sp_editar_eliminar_cultivo_contacto.sql
+│       ├── 014_sp_editar_eliminar_cultivo_contacto.sql
+│       ├── 015_sp_avances.sql
+│       └── 016_sp_fotografias.sql
 ├── liquibase.properties.example          plantilla de configuración (sin contraseña)
 └── .gitignore                            ignora liquibase.properties y respaldos/
 ```
@@ -67,8 +70,19 @@ AgroPWA-BD/
 | 012 | Procedimientos | `sp_obtener_resumen_dashboard` (totales y guía; «avances del mes» en hora de México) · `sp_obtener_actividad_reciente` (últimos N avances, máx. 20) | HU-12 | `DROP PROCEDURE` |
 | 013 | Procedimientos | `sp_obtener_tipos_cultivo` (catálogo) · `sp_registrar_cultivo` (parcela del usuario y tipo válido, si no lanza `P0002` con `COLUMN`; `id_local` repetido devuelve el existente) · `sp_obtener_cultivos` (búsqueda sin acentos en cultivo o parcela, filtros, paginación y `total`) · `sp_obtener_detalle_cultivo` · `sp_obtener_avances_cultivo` · `sp_obtener_fotografias_cultivo` | HU-14 a HU-16 | `DROP PROCEDURE` |
 | 014 | Procedimientos e índice | `sp_editar_cultivo` (`p_existe = false` si no es del usuario; si `p_fecha_modificacion` es anterior a la última modificación conserva la versión guardada; `fecha_cosecha` solo si está finalizado) · `sp_eliminar_cultivo` (borra en cascada avances y fotografías) · `ix_mensaje_contacto_correo_fecha` · `sp_registrar_mensaje_contacto` (máximo 3 por hora por correo) · `sp_obtener_detalle_cultivo` ahora devuelve `fecha_actualizacion` | HU-17, HU-18, HU-28 | `DROP` · la 014-05 restaura la versión de la 013 |
+| 015 | Procedimientos | `sp_obtener_tipos_actividad` (catálogo) · `sp_registrar_avance` (cultivo del usuario y **activo**; fecha no anterior a la siembra en hora de México; riego exige duración y método, fertilización producto, cantidad y unidad, decidido por el **nombre** del tipo; los campos que no aplican se guardan vacíos; `id_local` repetido devuelve el existente) · `sp_obtener_avance` | HU-19 | `DROP PROCEDURE` |
+| 016 | Índice y procedimientos | `ux_fotografia_portada` (una portada por cultivo, con **precondición**) · `sp_registrar_fotografia` (cultivo del usuario, avance del mismo cultivo, máximo 5 por avance, la portada nueva reemplaza a la anterior) · `sp_obtener_fotografia` · `sp_eliminar_fotografia` (devuelve la ruta para borrar el archivo) | HU-20 | `DROP` |
 
-En total son **39 changesets**.
+En total son **46 changesets**.
+
+**Errores que los procedimientos envían a la API** (desde la 013):
+
+| Código | Uso | La API responde |
+|---|---|---|
+| `P0002` (`no_data_found`) **con** `COLUMN` | Un dato del formulario no es válido (p. ej. la parcela o el tipo) | 400 en ese campo |
+| `22023` (`invalid_parameter_value`) con `COLUMN` | Una regla de un campo (fecha antes de la siembra, falta la duración del riego…) | 400 en ese campo |
+| `P0002` **sin** `COLUMN` | El cultivo no existe o es de otro usuario | 404 |
+| `55000` (`object_not_in_prerequisite_state`) | No se puede en el estado actual (cultivo no activo, avance con 5 fotos) | 409 |
 
 **Regla:** una migración ya aplicada **nunca se modifica** (Liquibase lo detecta por su checksum).
 Cada cambio nuevo es un archivo nuevo al final de `db.changelog-master.yaml`.
@@ -138,7 +152,7 @@ SELECT has_function_privilege('agro_app', 'sp_cerrar_sesion(varchar, boolean)', 
 
 ```bash
 liquibase validate              # revisa el changelog
-liquibase status --verbose      # cambios pendientes (39 en una base vacía)
+liquibase status --verbose      # cambios pendientes (46 en una base vacía)
 liquibase update-sql            # (opcional) muestra el SQL sin ejecutarlo
 liquibase update                # aplica todas las migraciones pendientes
 liquibase history               # cambios aplicados: fecha, autor, id y etiqueta
@@ -157,7 +171,7 @@ docker cp mi_postgres:/tmp/respaldo.dump respaldos/respaldo.dump
 
 liquibase rollback-count-sql 1  # muestra el SQL de la reversión sin ejecutarlo
 liquibase rollback-count 1      # revierte el último cambio
-liquibase rollback v1.0-hu03    # regresa a la base de la HU-03 (revierte de la 003 a la 014)
+liquibase rollback v1.0-hu03    # regresa a la base de la HU-03 (revierte de la 003 a la 016)
 liquibase update                # reaplica los cambios revertidos
 ```
 
@@ -220,3 +234,4 @@ Remove-Item Env:LIQUIBASE_COMMAND_PASSWORD
 | 5 | 011 y 012 |
 | 6 | 013 |
 | 7 | 014 |
+| 8 | 015 y 016 |
