@@ -10,6 +10,7 @@ HU-14, HU-15, HU-16 · Procedimientos de cultivos · Sprint 6
 HU-17, HU-18, HU-28 · Editar y eliminar cultivo, formulario de contacto · Sprint 7
 HU-19, HU-20 · Avances y fotografías · Sprint 8
 HU-21, HU-22 · Trabajo sin conexión y sincronización · Sprint 9
+HU-26, HU-27 · Perfil y recuperación de contraseña · Sprint 10
 Equipo: Victor Manuel Jose Jose · Jesus Alejandro Gutierrez Montufar (10 IDGS-G3, UTTT)
 
 **Backend (API .NET):** [AlejandroGtz23/AgroPWA-Back](https://github.com/AlejandroGtz23/AgroPWA-Back) — genera sus entidades
@@ -49,7 +50,9 @@ AgroPWA-BD/
 │       ├── 014_sp_editar_eliminar_cultivo_contacto.sql
 │       ├── 015_sp_avances.sql
 │       ├── 016_sp_fotografias.sql
-│       └── 017_sp_sincronizacion.sql
+│       ├── 017_sp_sincronizacion.sql
+│       ├── 018_sp_perfil.sql
+│       └── 019_sp_recuperar_contrasena.sql
 ├── liquibase.properties.example          plantilla de configuración (sin contraseña)
 └── .gitignore                            ignora liquibase.properties y respaldos/
 ```
@@ -75,8 +78,10 @@ AgroPWA-BD/
 | 015 | Procedimientos | `sp_obtener_tipos_actividad` (catálogo) · `sp_registrar_avance` (cultivo del usuario y **activo**; fecha no anterior a la siembra en hora de México; riego exige duración y método, fertilización producto, cantidad y unidad, decidido por el **nombre** del tipo; los campos que no aplican se guardan vacíos; `id_local` repetido devuelve el existente) · `sp_obtener_avance` | HU-19 | `DROP PROCEDURE` |
 | 016 | Índice y procedimientos | `ux_fotografia_portada` (una portada por cultivo, con **precondición**) · `sp_registrar_fotografia` (cultivo del usuario, avance del mismo cultivo, máximo 5 por avance, la portada nueva reemplaza a la anterior) · `sp_obtener_fotografia` · `sp_eliminar_fotografia` (devuelve la ruta para borrar el archivo) | HU-20 | `DROP` |
 | 017 | Procedimientos e índice | `sp_registrar_dispositivo` (identificador repetido devuelve el mismo) · `sp_actualizar_preferencias_dispositivo` (auto, solo Wi-Fi, espacio usado) · `sp_obtener_estado_sincronizacion` (última sincronización y errores) · `ix_cola_dispositivo_local` · `sp_registrar_resultado_sincronizacion` (guarda cada operación en `cola_sincronizacion`; los reintentos suman intentos) · `sp_marcar_sincronizacion_dispositivo` · `sp_obtener_id_por_local` (`id_local` → id del servidor) | HU-22 | `DROP` |
+| 018 | Procedimientos | `sp_obtener_perfil` (cursor con el rol) · `sp_actualizar_perfil` (el correo **no** se modifica; vacíos → NULL) · `sp_obtener_hash_contrasena` (la API verifica con BCrypt) · `sp_cambiar_contrasena` (guarda el hash nuevo, quita el bloqueo y cierra las **demás** sesiones con motivo `revocada`) | HU-26 | `DROP PROCEDURE` |
+| 019 | Índice y procedimientos | `ix_codigo_verificacion_hash` · `sp_crear_codigo_recuperacion` (guarda el **hash** del token, vence en 30 min, invalida los anteriores, máx. 3 por hora; `p_enviar` = false si el correo no existe, sin revelarlo) · `sp_restablecer_contrasena` (token de un solo uso con `FOR UPDATE`; cambia la contraseña y cierra **todas** las sesiones) | HU-27 | `DROP` |
 
-En total son **53 changesets**.
+En total son **60 changesets**.
 
 **Errores que los procedimientos envían a la API** (desde la 013):
 
@@ -155,7 +160,7 @@ SELECT has_function_privilege('agro_app', 'sp_cerrar_sesion(varchar, boolean)', 
 
 ```bash
 liquibase validate              # revisa el changelog
-liquibase status --verbose      # cambios pendientes (53 en una base vacía)
+liquibase status --verbose      # cambios pendientes (60 en una base vacía)
 liquibase update-sql            # (opcional) muestra el SQL sin ejecutarlo
 liquibase update                # aplica todas las migraciones pendientes
 liquibase history               # cambios aplicados: fecha, autor, id y etiqueta
@@ -174,7 +179,7 @@ docker cp mi_postgres:/tmp/respaldo.dump respaldos/respaldo.dump
 
 liquibase rollback-count-sql 1  # muestra el SQL de la reversión sin ejecutarlo
 liquibase rollback-count 1      # revierte el último cambio
-liquibase rollback v1.0-hu03    # regresa a la base de la HU-03 (revierte de la 003 a la 017)
+liquibase rollback v1.0-hu03    # regresa a la base de la HU-03 (revierte de la 003 a la 019)
 liquibase update                # reaplica los cambios revertidos
 ```
 
@@ -213,6 +218,7 @@ Todo cambio llega por Pull Request; cada PR valida las migraciones automáticame
 
 Después del merge a `main` y **antes** de desplegar el backend que las usa (si no, sus endpoints responden 500).
 Requisitos: servidor `agropwa-db-2` iniciado y tu IP en el firewall (**Redes → Agregar dirección IP del cliente actual**).
+Si Liquibase responde `Connect timed out`, tu IP cambió (o tu red bloquea el puerto 5432): agrega la IP actual y guarda.
 
 La contraseña de `agro_admin` se pasa en una variable de entorno para que **no quede escrita en el comando ni en el
 historial** de PowerShell:
@@ -239,3 +245,4 @@ Remove-Item Env:LIQUIBASE_COMMAND_PASSWORD
 | 7 | 014 |
 | 8 | 015 y 016 |
 | 9 | 017 |
+| 10 | 018 y 019 |
