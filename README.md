@@ -9,6 +9,7 @@ HU-12, HU-13 · Procedimientos del dashboard y de parcelas · Sprint 5
 HU-14, HU-15, HU-16 · Procedimientos de cultivos · Sprint 6
 HU-17, HU-18, HU-28 · Editar y eliminar cultivo, formulario de contacto · Sprint 7
 HU-19, HU-20 · Avances y fotografías · Sprint 8
+HU-21, HU-22 · Trabajo sin conexión y sincronización · Sprint 9
 Equipo: Victor Manuel Jose Jose · Jesus Alejandro Gutierrez Montufar (10 IDGS-G3, UTTT)
 
 **Backend (API .NET):** [AlejandroGtz23/AgroPWA-Back](https://github.com/AlejandroGtz23/AgroPWA-Back) — genera sus entidades
@@ -47,7 +48,8 @@ AgroPWA-BD/
 │       ├── 013_sp_cultivos.sql
 │       ├── 014_sp_editar_eliminar_cultivo_contacto.sql
 │       ├── 015_sp_avances.sql
-│       └── 016_sp_fotografias.sql
+│       ├── 016_sp_fotografias.sql
+│       └── 017_sp_sincronizacion.sql
 ├── liquibase.properties.example          plantilla de configuración (sin contraseña)
 └── .gitignore                            ignora liquibase.properties y respaldos/
 ```
@@ -72,8 +74,9 @@ AgroPWA-BD/
 | 014 | Procedimientos e índice | `sp_editar_cultivo` (`p_existe = false` si no es del usuario; si `p_fecha_modificacion` es anterior a la última modificación conserva la versión guardada; `fecha_cosecha` solo si está finalizado) · `sp_eliminar_cultivo` (borra en cascada avances y fotografías) · `ix_mensaje_contacto_correo_fecha` · `sp_registrar_mensaje_contacto` (máximo 3 por hora por correo) · `sp_obtener_detalle_cultivo` ahora devuelve `fecha_actualizacion` | HU-17, HU-18, HU-28 | `DROP` · la 014-05 restaura la versión de la 013 |
 | 015 | Procedimientos | `sp_obtener_tipos_actividad` (catálogo) · `sp_registrar_avance` (cultivo del usuario y **activo**; fecha no anterior a la siembra en hora de México; riego exige duración y método, fertilización producto, cantidad y unidad, decidido por el **nombre** del tipo; los campos que no aplican se guardan vacíos; `id_local` repetido devuelve el existente) · `sp_obtener_avance` | HU-19 | `DROP PROCEDURE` |
 | 016 | Índice y procedimientos | `ux_fotografia_portada` (una portada por cultivo, con **precondición**) · `sp_registrar_fotografia` (cultivo del usuario, avance del mismo cultivo, máximo 5 por avance, la portada nueva reemplaza a la anterior) · `sp_obtener_fotografia` · `sp_eliminar_fotografia` (devuelve la ruta para borrar el archivo) | HU-20 | `DROP` |
+| 017 | Procedimientos e índice | `sp_registrar_dispositivo` (identificador repetido devuelve el mismo) · `sp_actualizar_preferencias_dispositivo` (auto, solo Wi-Fi, espacio usado) · `sp_obtener_estado_sincronizacion` (última sincronización y errores) · `ix_cola_dispositivo_local` · `sp_registrar_resultado_sincronizacion` (guarda cada operación en `cola_sincronizacion`; los reintentos suman intentos) · `sp_marcar_sincronizacion_dispositivo` · `sp_obtener_id_por_local` (`id_local` → id del servidor) | HU-22 | `DROP` |
 
-En total son **46 changesets**.
+En total son **53 changesets**.
 
 **Errores que los procedimientos envían a la API** (desde la 013):
 
@@ -152,7 +155,7 @@ SELECT has_function_privilege('agro_app', 'sp_cerrar_sesion(varchar, boolean)', 
 
 ```bash
 liquibase validate              # revisa el changelog
-liquibase status --verbose      # cambios pendientes (46 en una base vacía)
+liquibase status --verbose      # cambios pendientes (53 en una base vacía)
 liquibase update-sql            # (opcional) muestra el SQL sin ejecutarlo
 liquibase update                # aplica todas las migraciones pendientes
 liquibase history               # cambios aplicados: fecha, autor, id y etiqueta
@@ -171,7 +174,7 @@ docker cp mi_postgres:/tmp/respaldo.dump respaldos/respaldo.dump
 
 liquibase rollback-count-sql 1  # muestra el SQL de la reversión sin ejecutarlo
 liquibase rollback-count 1      # revierte el último cambio
-liquibase rollback v1.0-hu03    # regresa a la base de la HU-03 (revierte de la 003 a la 016)
+liquibase rollback v1.0-hu03    # regresa a la base de la HU-03 (revierte de la 003 a la 017)
 liquibase update                # reaplica los cambios revertidos
 ```
 
@@ -235,3 +238,4 @@ Remove-Item Env:LIQUIBASE_COMMAND_PASSWORD
 | 6 | 013 |
 | 7 | 014 |
 | 8 | 015 y 016 |
+| 9 | 017 |
