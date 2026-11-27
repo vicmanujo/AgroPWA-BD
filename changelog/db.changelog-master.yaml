@@ -63,3 +63,6 @@ databaseChangeLog:
   - include:
       file: migraciones/019_sp_recuperar_contrasena.sql
       relativeToChangelogFile: true
+  - include:
+      file: migraciones/020_sp_verificar_correo.sql
+      relativeToChangelogFile: true
